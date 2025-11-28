@@ -18,7 +18,13 @@ const Login: React.FC = () => {
             if (res.data.success) {
                 const { user, tokens } = res.data.data;
                 login(tokens.accessToken, user);
-                navigate('/dashboard');
+
+                // Redirect based on user role
+                if (user.role === 'ADMIN') {
+                    navigate('/admin');
+                } else {
+                    navigate('/dashboard');
+                }
             }
         } catch (err: any) {
             setError(err.response?.data?.message || 'Login failed');

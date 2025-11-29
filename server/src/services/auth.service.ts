@@ -66,6 +66,19 @@ export class AuthService {
                         status: 'PENDING', // Pending approval
                     },
                 });
+
+                await tx.adminNotification.create({
+                    data: {
+                        type: 'restaurant_signup',
+                        title: 'New restaurant registration',
+                        message: `${businessName} submitted a new application`,
+                        restaurantId: restaurant.id,
+                        metadata: {
+                            ownerName: name,
+                            ownerEmail: email,
+                        },
+                    },
+                });
             }
 
             if (role === 'RIDER') {

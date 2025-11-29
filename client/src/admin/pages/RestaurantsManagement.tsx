@@ -28,6 +28,9 @@ export function RestaurantsManagement() {
     const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
     const [approvalNotes, setApprovalNotes] = useState("");
     const [approvalAction, setApprovalAction] = useState<"approve" | "reject">("approve");
+    const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+    const [detailsLoading, setDetailsLoading] = useState(false);
+    const [restaurantDetails, setRestaurantDetails] = useState<RestaurantData | null>(null);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -36,17 +39,21 @@ export function RestaurantsManagement() {
 
     async function loadRestaurants() {
         setLoading(true);
+        const params = {
+            status: statusFilter === "all" ? undefined : statusFilter,
+        };
         try {
-            const params = {
-                status: statusFilter === "all" ? undefined : statusFilter,
-            };
             const response = await restaurantApi.getRestaurants(params);
             setRestaurants(response.data);
         } catch (error) {
             console.error("Failed to load restaurants:", error);
+            const status = (error as any)?.response?.status;
             toast({
-                title: "Error",
-                description: "Failed to load restaurants",
+                title: status === 401 ? "Unauthorized" : "Error",
+                description:
+                    status === 401
+                        ? "Please log in with an admin account to view restaurants."
+                        : "Failed to load restaurants",
                 variant: "destructive",
             });
         } finally {
@@ -92,6 +99,29 @@ export function RestaurantsManagement() {
         setSelectedRestaurant(restaurant);
         setApprovalAction(action);
         setApprovalDialogOpen(true);
+    };
+
+    const openDetailsDialog = async (restaurant: RestaurantData) => {
+        setDetailsDialogOpen(true);
+        setDetailsLoading(true);
+        try {
+            const detailed = await restaurantApi.getRestaurant(restaurant.id);
+            setRestaurantDetails(detailed ?? restaurant);
+        } catch (error) {
+            console.error("Failed to fetch restaurant details", error);
+            toast({
+                title: "Unable to load details",
+                description: "Showing the data we already have for this restaurant.",
+            });
+            setRestaurantDetails(restaurant);
+        } finally {
+            setDetailsLoading(false);
+        }
+    };
+
+    const closeDetailsDialog = () => {
+        setDetailsDialogOpen(false);
+        setRestaurantDetails(null);
     };
 
     return (
@@ -232,7 +262,12 @@ export function RestaurantsManagement() {
                                                                 Suspend
                                                             </Button>
                                                         )}
-                                                        <Button size="sm" variant="ghost">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => openDetailsDialog(restaurant)}
+                                                            aria-label="View restaurant submission"
+                                                        >
                                                             <Eye className="h-4 w-4" />
                                                         </Button>
                                                     </div>
@@ -289,6 +324,139 @@ export function RestaurantsManagement() {
                             {approvalAction === "approve" ? "Approve" : "Reject"}
                         </Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Restaurant detail preview dialog */}
+            <Dialog open={detailsDialogOpen} onOpenChange={(open) => (open ? setDetailsDialogOpen(true) : closeDetailsDialog())}>
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>{restaurantDetails?.name ?? "Restaurant details"}</DialogTitle>
+                        <DialogDescription>
+                            Submitted by {restaurantDetails?.ownerName ?? "owner"} · {restaurantDetails?.ownerEmail}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {detailsLoading ? (
+                        <div className="flex h-40 items-center justify-center text-sm text-slate-500">
+                            Fetching latest information...
+                        </div>
+                    ) : restaurantDetails ? (
+                        <div className="space-y-6">
+                            <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
+                                <img
+                                    src={restaurantDetails.storefrontImage || "https://images.unsplash.com/photo-1528605248644-14dd04022da1"}
+                                    alt={`${restaurantDetails.name} storefront`}
+                                    className="h-56 w-full object-cover"
+                                />
+                            </div>
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <div>
+                                    <p className="text-xs uppercase tracking-wide text-slate-500">Business name</p>
+                                    <p className="text-base font-semibold text-slate-900 dark:text-white">
+                                        {restaurantDetails.businessName ?? restaurantDetails.name}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs uppercase tracking-wide text-slate-500">Contact</p>
+                                    <p className="text-base font-semibold text-slate-900 dark:text-white">
+                                        {restaurantDetails.phone ?? "Not provided"}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs uppercase tracking-wide text-slate-500">Owner</p>
+                                    <p className="text-base font-semibold text-slate-900 dark:text-white">
+                                        {restaurantDetails.ownerName}
+                                    </p>
+                                    <p className="text-sm text-slate-500">{restaurantDetails.ownerEmail}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs uppercase tracking-wide text-slate-500">Status</p>
+                                    {restaurantDetails.suspended ? (
+                                        <Badge variant="destructive">Suspended</Badge>
+                                    ) : restaurantDetails.approved ? (
+                                        <Badge variant="success">Active</Badge>
+                                    ) : (
+                                        <Badge variant="warning">Pending</Badge>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div>
+                                <p className="text-xs uppercase tracking-wide text-slate-500">Address</p>
+                                <p className="text-sm text-slate-700 dark:text-slate-300">{restaurantDetails.address}</p>
+                                {(restaurantDetails.lat || restaurantDetails.lng) && (
+                                    <p className="text-xs text-slate-400">
+                                        Lat: {restaurantDetails.lat?.toFixed(4)} · Lng: {restaurantDetails.lng?.toFixed(4)}
+                                    </p>
+                                )}
+                            </div>
+
+                            {restaurantDetails.description && (
+                                <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-900/40 dark:text-slate-300">
+                                    {restaurantDetails.description}
+                                </div>
+                            )}
+
+                            <div className="grid gap-4 sm:grid-cols-3">
+                                <div className="rounded-2xl border border-slate-200 p-3 text-center dark:border-slate-800">
+                                    <p className="text-xs uppercase tracking-wide text-slate-500">Menu items</p>
+                                    <p className="text-2xl font-semibold">{restaurantDetails.menuItemsCount ?? 0}</p>
+                                </div>
+                                <div className="rounded-2xl border border-slate-200 p-3 text-center dark:border-slate-800">
+                                    <p className="text-xs uppercase tracking-wide text-slate-500">Orders</p>
+                                    <p className="text-2xl font-semibold">{restaurantDetails.ordersCount ?? 0}</p>
+                                </div>
+                                <div className="rounded-2xl border border-slate-200 p-3 text-center dark:border-slate-800">
+                                    <p className="text-xs uppercase tracking-wide text-slate-500">Rating</p>
+                                    <p className="text-2xl font-semibold">{restaurantDetails.rating?.toFixed(1) ?? "–"}</p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <p className="text-xs uppercase tracking-wide text-slate-500">Cuisines</p>
+                                {restaurantDetails.cuisines?.length ? (
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        {restaurantDetails.cuisines.map((cuisine) => (
+                                            <Badge key={cuisine} variant="outline" className="text-xs">
+                                                {cuisine}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-slate-500">No cuisines specified.</p>
+                                )}
+                            </div>
+
+                            <div>
+                                <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">Uploaded documents</p>
+                                {restaurantDetails.documents?.length ? (
+                                    <div className="grid gap-3 md:grid-cols-2">
+                                        {restaurantDetails.documents.map((document) => (
+                                            <a
+                                                key={`${document.type}-${document.name}`}
+                                                href={document.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="rounded-2xl border border-slate-200 p-3 transition hover:border-slate-400 dark:border-slate-800 dark:hover:border-slate-600"
+                                            >
+                                                <p className="text-sm font-semibold text-slate-900 dark:text-white">{document.name}</p>
+                                                <p className="text-xs text-slate-500">{document.type}</p>
+                                                {document.verified !== undefined && (
+                                                    <Badge className="mt-2" variant={document.verified ? "success" : "secondary"}>
+                                                        {document.verified ? "Verified" : "Uploaded"}
+                                                    </Badge>
+                                                )}
+                                            </a>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-slate-500">No documents provided.</p>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <p className="text-sm text-slate-500">No additional data available for this restaurant.</p>
+                    )}
                 </DialogContent>
             </Dialog>
         </div>

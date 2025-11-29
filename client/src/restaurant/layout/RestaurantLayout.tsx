@@ -12,6 +12,7 @@ interface RestaurantLayoutProps {
 
 export function RestaurantLayout({ children }: RestaurantLayoutProps) {
     const [isSidebarOpen, setSidebarOpen] = useState(false);
+    const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [isDarkMode, setDarkMode] = useState(() =>
         typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : false
     );
@@ -31,17 +32,45 @@ export function RestaurantLayout({ children }: RestaurantLayoutProps) {
         setDarkMode((prev) => !prev);
     };
 
+    const handleSidebarToggle = () => {
+        if (typeof window !== "undefined" && window.innerWidth < 1024) {
+            setSidebarOpen((prev) => !prev);
+            return;
+        }
+        setSidebarCollapsed((prev) => !prev);
+    };
+
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth >= 1024) {
+                setSidebarOpen(false);
+            }
+        };
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
     return (
         <div className={cn("flex min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950", isDarkMode && "dark")}>
-            <Sidebar isOpen={isSidebarOpen} onClose={() => setSidebarOpen(false)} />
+            <Sidebar
+                isOpen={isSidebarOpen}
+                onClose={() => setSidebarOpen(false)}
+                isCollapsed={isSidebarCollapsed}
+                onToggleCollapse={handleSidebarToggle}
+            />
             {isSidebarOpen && (
                 <div
                     className="fixed inset-0 z-30 bg-slate-900/50 backdrop-blur-sm lg:hidden"
                     onClick={() => setSidebarOpen(false)}
                 />
             )}
-            <div className="flex flex-1 flex-col lg:ml-72">
-                <Topbar onToggleSidebar={() => setSidebarOpen((prev) => !prev)} onToggleTheme={toggleDarkMode} isDarkMode={isDarkMode} />
+            <div
+                className={cn(
+                    "flex flex-1 flex-col transition-all duration-300",
+                    isSidebarCollapsed ? "lg:ml-16" : "lg:ml-64"
+                )}
+            >
+                <Topbar onToggleSidebar={handleSidebarToggle} onToggleTheme={toggleDarkMode} isDarkMode={isDarkMode} />
                 <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-10">
                     {loading ? (
                         <div className="space-y-4">

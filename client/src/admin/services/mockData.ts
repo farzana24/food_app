@@ -69,6 +69,13 @@ function generateMockRestaurants(count: number): RestaurantData[] {
         "Noodle Bar",
         "Mediterranean Grill",
     ];
+    const storefrontImages = [
+        "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4",
+        "https://images.unsplash.com/photo-1432139509613-5c4255815697",
+        "https://images.unsplash.com/photo-1498654896293-37aacf113fd9",
+        "https://images.unsplash.com/photo-1504674900247-0877df9cc836",
+        "https://images.unsplash.com/photo-1497644083578-611b798c60f3",
+    ];
 
     for (let i = 0; i < count; i++) {
         restaurants.push({
@@ -76,7 +83,11 @@ function generateMockRestaurants(count: number): RestaurantData[] {
             ownerId: 100 + i,
             ownerName: `Owner ${i + 1}`,
             ownerEmail: `owner${i + 1}@example.com`,
+            phone: `+8801${Math.floor(Math.random() * 900000000 + 100000000)}`,
             name: restaurantNames[i % restaurantNames.length],
+            businessName: `${restaurantNames[i % restaurantNames.length]} Ltd`,
+            description:
+                "Family-owned kitchen bringing fresh flavors from locally sourced ingredients with guaranteed hygiene checks.",
             address: `${Math.floor(Math.random() * 999) + 1} Main St, Dhaka`,
             lat: 23.8 + Math.random() * 0.1,
             lng: 90.4 + Math.random() * 0.1,
@@ -86,6 +97,24 @@ function generateMockRestaurants(count: number): RestaurantData[] {
             menuItemsCount: Math.floor(Math.random() * 50) + 10,
             ordersCount: Math.floor(Math.random() * 500),
             rating: 3.5 + Math.random() * 1.5,
+            cuisines: ["Bengali", "Fusion", "Fast Food"].slice(0, Math.floor(Math.random() * 3) + 1),
+            storefrontImage: storefrontImages[i % storefrontImages.length],
+            documents: [
+                {
+                    id: `trade-${i}`,
+                    name: "Trade License",
+                    type: "License",
+                    url: "https://example.com/docs/trade-license.pdf",
+                    verified: Math.random() > 0.2,
+                },
+                {
+                    id: `hygiene-${i}`,
+                    name: "Food Safety Certificate",
+                    type: "Certification",
+                    url: "https://example.com/docs/hygiene-cert.pdf",
+                    verified: Math.random() > 0.4,
+                },
+            ],
         });
     }
     return restaurants;

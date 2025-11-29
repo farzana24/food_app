@@ -44,22 +44,51 @@ export type OrderStatus =
     | "DELIVERED"
     | "CANCELLED";
 
+export interface RestaurantDocument {
+    id?: number | string;
+    name: string;
+    type: string;
+    url: string;
+    uploadedAt?: string;
+    verified?: boolean;
+}
+
+export interface AdminNotification {
+    id: number;
+    type: string;
+    title: string;
+    message: string;
+    read: boolean;
+    restaurantId?: number | null;
+    restaurant?: { id: number; name: string } | null;
+    metadata?: Record<string, unknown> | null;
+    createdAt: string;
+}
+
 export interface RestaurantData {
     id: number;
     ownerId: number;
     ownerName: string;
     ownerEmail: string;
+    phone?: string;
     name: string;
+    businessName?: string;
+    description?: string;
     address: string;
     lat: number | null;
     lng: number | null;
     approved: boolean;
     suspended?: boolean;
+    storefrontImage?: string;
+    bannerImage?: string;
+    cuisines?: string[];
     createdAt: string;
     updatedAt: string;
     menuItemsCount?: number;
     ordersCount?: number;
     rating?: number;
+    averageOrderValue?: number;
+    documents?: RestaurantDocument[];
 }
 
 export interface UserData {

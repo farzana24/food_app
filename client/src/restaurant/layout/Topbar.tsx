@@ -16,7 +16,7 @@ interface TopbarProps {
 
 export function Topbar({ onToggleSidebar, onToggleTheme, isDarkMode }: TopbarProps) {
     const alerts = useRestaurantStore((state) => state.alerts);
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const [alertsOpen, setAlertsOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(alerts.length);
     const alertsRef = useRef<HTMLDivElement | null>(null);
@@ -59,7 +59,7 @@ export function Topbar({ onToggleSidebar, onToggleTheme, isDarkMode }: TopbarPro
     return (
         <header className="sticky top-0 z-30 border-b border-slate-100 bg-white/80 px-6 py-4 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/60">
             <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" className="lg:hidden" onClick={onToggleSidebar}>
+                <Button variant="ghost" size="icon" className="lg:hidden" onClick={onToggleSidebar} aria-label="Toggle sidebar">
                     <Menu className="h-5 w-5" />
                 </Button>
                 <div className="hidden flex-1 items-center gap-3 rounded-full border border-slate-200 px-4 py-2 dark:border-slate-800 lg:flex">
@@ -138,7 +138,7 @@ export function Topbar({ onToggleSidebar, onToggleTheme, isDarkMode }: TopbarPro
                             </Button>
                         </DropdownMenu.Trigger>
                         <DropdownMenu.Portal>
-                            <DropdownMenu.Content className="w-56 rounded-2xl border border-slate-100 bg-white p-3 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+                            <DropdownMenu.Content className="z-50 w-56 rounded-2xl border border-slate-100 bg-white p-3 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
                                 <DropdownMenu.Item
                                     className="cursor-pointer rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                                     onSelect={(event) => {
@@ -156,6 +156,16 @@ export function Topbar({ onToggleSidebar, onToggleTheme, isDarkMode }: TopbarPro
                                     }}
                                 >
                                     Restaurant settings
+                                </DropdownMenu.Item>
+                                <DropdownMenu.Item
+                                    className="cursor-pointer rounded-lg px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-900/30"
+                                    onSelect={(event) => {
+                                        event.preventDefault();
+                                        logout();
+                                        navigate("/login");
+                                    }}
+                                >
+                                    Log out
                                 </DropdownMenu.Item>
                             </DropdownMenu.Content>
                         </DropdownMenu.Portal>

@@ -13,7 +13,7 @@ import {
     DialogTitle,
 } from "../components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { mockApi } from "../services/mockData";
+import { restaurantApi } from "../services/restaurantApi";
 import { formatDateTime } from "../utils/helpers";
 import type { RestaurantData } from "../types";
 import { Search, Check, X, Eye } from "lucide-react";
@@ -40,10 +40,15 @@ export function RestaurantsManagement() {
             const params = {
                 status: statusFilter === "all" ? undefined : statusFilter,
             };
-            const response = await mockApi.getRestaurants(params);
+            const response = await restaurantApi.getRestaurants(params);
             setRestaurants(response.data);
         } catch (error) {
             console.error("Failed to load restaurants:", error);
+            toast({
+                title: "Error",
+                description: "Failed to load restaurants",
+                variant: "destructive",
+            });
         } finally {
             setLoading(false);
         }
@@ -64,7 +69,7 @@ export function RestaurantsManagement() {
 
         try {
             const approved = approvalAction === "approve";
-            await mockApi.approveRestaurant(selectedRestaurant.id, approved, approvalNotes);
+            await restaurantApi.approveRestaurant(selectedRestaurant.id, approved, approvalNotes);
 
             toast({
                 title: approved ? "Restaurant Approved" : "Restaurant Rejected",
@@ -208,7 +213,7 @@ export function RestaurantsManagement() {
                                                                 variant="outline"
                                                                 onClick={async () => {
                                                                     try {
-                                                                        await mockApi.suspendRestaurant(restaurant.id, true);
+                                                                        await restaurantApi.suspendRestaurant(restaurant.id, true);
                                                                         toast({
                                                                             title: "Restaurant Suspended",
                                                                             description: `${restaurant.name} has been suspended.`,

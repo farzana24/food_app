@@ -169,6 +169,7 @@ model RestaurantProfile {
   openingHours    Json?
   taxId           String?
   deliveryOptions String[]
+  storefrontImage String?       // Cloudinary URL for storefront picture
   status          AccountStatus @default(PENDING)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt

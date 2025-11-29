@@ -2,9 +2,35 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { client } from '../api/client';
-import { User, Store, Bike } from 'lucide-react';
+import { User, Store, Bike, Upload, X } from 'lucide-react';
 
+// Define possible user roles
 type Role = 'CUSTOMER' | 'RESTAURANT' | 'RIDER';
+
+// Options displayed on the role selection screen
+const roleOptions = [
+    {
+        value: 'CUSTOMER' as Role,
+        title: 'Customer',
+        description: 'Order delicious food',
+        icon: User,
+        color: 'from-blue-500 to-blue-600',
+    },
+    {
+        value: 'RESTAURANT' as Role,
+        title: 'Restaurant',
+        description: 'Grow your business',
+        icon: Store,
+        color: 'from-purple-500 to-purple-600',
+    },
+    {
+        value: 'RIDER' as Role,
+        title: 'Rider',
+        description: 'Deliver & earn money',
+        icon: Bike,
+        color: 'from-green-500 to-green-600',
+    },
+];
 
 const Register: React.FC = () => {
     const [selectedRole, setSelectedRole] = useState<Role | null>(null);
@@ -13,23 +39,55 @@ const Register: React.FC = () => {
     const [password, setPassword] = useState('');
     const [phone, setPhone] = useState('');
 
-    // Restaurant-specific fields
+    // Restaurant‑specific fields
     const [businessName, setBusinessName] = useState('');
     const [address, setAddress] = useState('');
+    const [storefrontImage, setStorefrontImage] = useState('');
+    const [storefrontPreview, setStorefrontPreview] = useState('');
 
-    // Rider-specific fields
+    // Rider‑specific fields
     const [vehicleType, setVehicleType] = useState('BIKE');
 
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showApprovalMessage, setShowApprovalMessage] = useState(false);
+
     const { login } = useAuth();
     const navigate = useNavigate();
 
+    // Image upload handling for restaurant storefronts
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            setError('Please upload an image file');
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            setError('Image size must be less than 5MB');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const base64 = reader.result as string;
+            setStorefrontImage(base64);
+            setStorefrontPreview(base64);
+            setError('');
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const removeImage = () => {
+        setStorefrontImage('');
+        setStorefrontPreview('');
+    };
+
+    // Form submission
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setLoading(true);
-
         try {
             const payload: any = {
                 name,
@@ -39,12 +97,12 @@ const Register: React.FC = () => {
                 phone: phone || undefined,
             };
 
-            // Add role-specific data
-            if (selectedRole === 'RESTAURANT' && businessName && address) {
+            // Add role‑specific data
+            if (selectedRole === 'RESTAURANT') {
                 payload.businessName = businessName;
                 payload.address = address;
+                if (storefrontImage) payload.storefrontImage = storefrontImage;
             }
-
             if (selectedRole === 'RIDER') {
                 payload.vehicleType = vehicleType;
             }
@@ -53,14 +111,23 @@ const Register: React.FC = () => {
 
             if (res.data.success) {
                 const { user, tokens } = res.data.data;
-                login(tokens.accessToken, user);
-
-                // Redirect based on role
-                if (user.role === 'ADMIN') {
-                    navigate('/admin');
+                if (user.role === 'RESTAURANT') {
+                    // Show pending‑approval modal and redirect to login after a short delay
+                    setShowApprovalMessage(true);
+                    setTimeout(() => {
+                        navigate('/login');
+                    }, 5000);
                 } else {
-                    navigate('/dashboard');
+                    // Immediate login for other roles
+                    login(tokens.accessToken, user);
+                    if (user.role === 'ADMIN') {
+                        navigate('/admin');
+                    } else {
+                        navigate('/dashboard');
+                    }
                 }
+            } else {
+                setError(res.data.message || 'Registration failed');
             }
         } catch (err: any) {
             setError(err.response?.data?.message || 'Registration failed');
@@ -68,30 +135,6 @@ const Register: React.FC = () => {
             setLoading(false);
         }
     };
-
-    const roleOptions = [
-        {
-            value: 'CUSTOMER' as Role,
-            title: 'Customer',
-            description: 'Order delicious food',
-            icon: User,
-            color: 'from-blue-500 to-blue-600',
-        },
-        {
-            value: 'RESTAURANT' as Role,
-            title: 'Restaurant',
-            description: 'Grow your business',
-            icon: Store,
-            color: 'from-purple-500 to-purple-600',
-        },
-        {
-            value: 'RIDER' as Role,
-            title: 'Rider',
-            description: 'Deliver & earn money',
-            icon: Bike,
-            color: 'from-green-500 to-green-600',
-        },
-    ];
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-500 to-red-600 p-4">
@@ -109,12 +152,10 @@ const Register: React.FC = () => {
                     </div>
                 )}
 
+                {/* Role selection */}
                 {!selectedRole ? (
-                    // Role Selection
                     <div>
-                        <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">
-                            I want to...
-                        </h2>
+                        <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">I want to...</h2>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {roleOptions.map((option) => {
                                 const Icon = option.icon;
@@ -122,26 +163,26 @@ const Register: React.FC = () => {
                                     <button
                                         key={option.value}
                                         onClick={() => setSelectedRole(option.value)}
-                                        className={`p-6 rounded-xl border-2 border-gray-200 hover:border-orange-400 hover:shadow-lg transition-all duration-200 group cursor-pointer bg-white`}
+                                        className="p-6 rounded-xl border-2 border-gray-200 hover:border-orange-400 hover:shadow-lg transition-all duration-200 group cursor-pointer bg-white"
                                     >
-                                        <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r ${option.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                                        <div
+                                            className={`w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r ${option.color} flex items-center justify-center group-hover:scale-110 transition-transform`}
+                                        >
                                             <Icon className="w-8 h-8 text-white" />
                                         </div>
-                                        <h3 className="text-lg font-bold text-gray-800 mb-1">
-                                            {option.title}
-                                        </h3>
-                                        <p className="text-sm text-gray-500">{option.description}</p>
+                                        <h3 className="text-lg font-bold text-gray-800 mb-1">{option.title}</h3>
+                                        <p className="text-sm text-gray-5">{option.description}</p>
                                     </button>
                                 );
                             })}
                         </div>
                     </div>
                 ) : (
-                    // Registration Form
+                    // Registration form
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-xl font-bold text-gray-800">
-                                Sign up as {roleOptions.find(r => r.value === selectedRole)?.title}
+                                Sign up as {roleOptions.find((r) => r.value === selectedRole)?.title}
                             </h2>
                             <button
                                 type="button"
@@ -152,11 +193,9 @@ const Register: React.FC = () => {
                             </button>
                         </div>
 
-                        {/* Common Fields */}
+                        {/* Common fields */}
                         <div>
-                            <label className="block text-gray-700 text-sm font-bold mb-2 ml-1">
-                                Full Name
-                            </label>
+                            <label className="block text-gray-700 text-sm font-bold mb-2 ml-1">Full Name</label>
                             <input
                                 type="text"
                                 className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-200 outline-none transition-all duration-200"
@@ -168,9 +207,7 @@ const Register: React.FC = () => {
                         </div>
 
                         <div>
-                            <label className="block text-gray-700 text-sm font-bold mb-2 ml-1">
-                                Email Address
-                            </label>
+                            <label className="block text-gray-700 text-sm font-bold mb-2 ml-1">Email Address</label>
                             <input
                                 type="email"
                                 className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-200 outline-none transition-all duration-200"
@@ -182,9 +219,7 @@ const Register: React.FC = () => {
                         </div>
 
                         <div>
-                            <label className="block text-gray-700 text-sm font-bold mb-2 ml-1">
-                                Password
-                            </label>
+                            <label className="block text-gray-700 text-sm font-bold mb-2 ml-1">Password</label>
                             <input
                                 type="password"
                                 className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-200 outline-none transition-all duration-200"
@@ -198,7 +233,7 @@ const Register: React.FC = () => {
 
                         <div>
                             <label className="block text-gray-700 text-sm font-bold mb-2 ml-1">
-                                Phone Number (Optional)
+                                Phone Number {selectedRole === 'RESTAURANT' && <span className="text-red-500">*</span>}
                             </label>
                             <input
                                 type="tel"
@@ -206,16 +241,15 @@ const Register: React.FC = () => {
                                 placeholder="+880 1234-567890"
                                 value={phone}
                                 onChange={(e) => setPhone(e.target.value)}
+                                required={selectedRole === 'RESTAURANT'}
                             />
                         </div>
 
-                        {/* Restaurant-specific fields */}
+                        {/* Restaurant‑specific fields */}
                         {selectedRole === 'RESTAURANT' && (
                             <>
                                 <div>
-                                    <label className="block text-gray-700 text-sm font-bold mb-2 ml-1">
-                                        Business Name
-                                    </label>
+                                    <label className="block text-gray-700 text-sm font-bold mb-2 ml-1">Business Name</label>
                                     <input
                                         type="text"
                                         className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-200 outline-none transition-all duration-200"
@@ -226,9 +260,7 @@ const Register: React.FC = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-gray-700 text-sm font-bold mb-2 ml-1">
-                                        Restaurant Address
-                                    </label>
+                                    <label className="block text-gray-700 text-sm font-bold mb-2 ml-1">Restaurant Address</label>
                                     <input
                                         type="text"
                                         className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-200 outline-none transition-all duration-200"
@@ -238,15 +270,48 @@ const Register: React.FC = () => {
                                         required
                                     />
                                 </div>
+                                <div>
+                                    <label className="block text-gray-700 text-sm font-bold mb-2 ml-1">Storefront Picture (Optional)</label>
+                                    {storefrontPreview ? (
+                                        <div className="relative">
+                                            <img
+                                                src={storefrontPreview}
+                                                alt="Storefront preview"
+                                                className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={removeImage}
+                                                className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-colors"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-all">
+                                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                                <Upload className="w-10 h-10 mb-3 text-gray-400" />
+                                                <p className="mb-2 text-sm text-gray-500">
+                                                    <span className="font-semibold">Click to upload</span> or drag and drop
+                                                </p>
+                                                <p className="text-xs text-gray-400">PNG, JPG, WEBP (MAX. 5MB)</p>
+                                            </div>
+                                            <input
+                                                type="file"
+                                                className="hidden"
+                                                accept="image/*"
+                                                onChange={handleImageUpload}
+                                            />
+                                        </label>
+                                    )}
+                                </div>
                             </>
                         )}
 
-                        {/* Rider-specific fields */}
+                        {/* Rider‑specific fields */}
                         {selectedRole === 'RIDER' && (
                             <div>
-                                <label className="block text-gray-700 text-sm font-bold mb-2 ml-1">
-                                    Vehicle Type
-                                </label>
+                                <label className="block text-gray-700 text-sm font-bold mb-2 ml-1">Vehicle Type</label>
                                 <select
                                     className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-200 outline-none transition-all duration-200"
                                     value={vehicleType}
@@ -282,6 +347,28 @@ const Register: React.FC = () => {
                         </Link>
                     </p>
                 </div>
+
+                {/* Admin approval modal for restaurant registrations */}
+                {showApprovalMessage && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl transform animate-in">
+                            <div className="text-center">
+                                <div className="w-20 h-20 bg-gradient-to-r from-orange-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Store className="w-10 h-10 text-white" />
+                                </div>
+                                <h2 className="text-2xl font-bold text-gray-800 mb-2">Registration Successful!</h2>
+                                <p className="text-gray-600 mb-4">Your restaurant account has been created.</p>
+                                <div className="bg-orange-50 border-l-4 border-orange-500 p-4 rounded mb-4">
+                                    <p className="text-orange-800 font-semibold text-sm">⏳ Waiting for Admin Approval</p>
+                                    <p className="text-orange-700 text-sm mt-1">
+                                        An administrator will review your restaurant profile shortly. You'll be notified once approved.
+                                    </p>
+                                </div>
+                                <p className="text-sm text-gray-500">Redirecting to login in 5 seconds...</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

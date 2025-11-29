@@ -13,8 +13,18 @@ const registerSchema = z.object({
     // Restaurant-specific
     businessName: z.string().optional(),
     address: z.string().optional(),
+    storefrontImage: z.string().optional(), // Base64 encoded image
     // Rider-specific
     vehicleType: z.enum(['BIKE', 'CAR', 'BICYCLE', 'SCOOTER']).optional(),
+}).refine((data) => {
+    // Phone is required for restaurant registrations
+    if (data.role === 'RESTAURANT' && !data.phone) {
+        return false;
+    }
+    return true;
+}, {
+    message: 'Phone number is required for restaurant registration',
+    path: ['phone'],
 });
 
 const loginSchema = z.object({

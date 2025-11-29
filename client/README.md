@@ -1,73 +1,93 @@
-# React + TypeScript + Vite
+# RideN'Bite Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 18 + Vite + Tailwind 4 client for the RideN'Bite food delivery platform. The app now includes a production-grade Restaurant Role dashboard with authenticated routing, Zustand state, shadcn/ui components, and socket-driven realtime updates.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- React 18 + TypeScript + Vite
+- Tailwind CSS v4 + shadcn/ui (Radix primitives)
+- Zustand for local state orchestration
+- Axios (shared `client/src/api/client.ts` instance)
+- Recharts for data viz
+- Socket.IO client for realtime orders + alerts
+- Framer Motion for subtle motion
 
-## React Compiler
+## Scripts
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev       # start Vite dev server
+npm run build     # type-check + production build
+npm run preview   # preview production build
+npm run test      # vitest unit tests
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Restaurant Dashboard Architecture
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
 ```
+src/restaurant
+├── RestaurantApp.tsx              # Nested router mounted at /restaurant/*
+├── layout/
+│   ├── RestaurantLayout.tsx      # Sidebar + topbar + skeleton loader
+│   ├── Sidebar.tsx               # RideN'Bite navigation + logout
+│   └── Topbar.tsx                # Search, alerts dropdown, profile menu
+├── pages/
+│   ├── OverviewPage.tsx          # Stats cards, charts, realtime alerts
+│   ├── MenuPage.tsx              # CRUD + bulk actions for dishes
+│   ├── OrdersPage.tsx            # Order board, status flow, details dialog
+│   ├── EarningsPage.tsx          # Earnings summary + payout form
+│   ├── ProfilePage.tsx           # Restaurant identity form
+│   ├── AnalyticsPage.tsx         # Deep-dive charts (Recharts)
+│   └── SettingsPage.tsx          # General + security controls
+├── components/
+│   └── MenuForm.tsx              # Reusable dish form with validation
+├── hooks/
+│   ├── useMenuBulkSelection.ts   # Bulk checkbox helper
+│   └── useRestaurantSocket.ts    # Socket.IO bridge for alerts/orders
+├── store/
+│   └── restaurantStore.ts        # Zustand store + API wiring + fallbacks
+├── services/
+│   └── restaurantApi.ts          # Axios wrappers for /restaurant endpoints
+├── data/
+│   └── dummy.ts                  # RideN'Bite themed mock/fallback data
+├── constants/
+│   └── navigation.ts             # Sidebar route metadata
+└── types/
+    ├── index.ts                  # Shared domain types/enums
+    └── schemas.ts                # Zod schemas & form value types
+```
+
+## Routing & Auth
+
+- `App.tsx` mounts `/restaurant/*` inside `ProtectedRoute` limited to the `RESTAURANT` role.
+- `RoleBasedRedirect.tsx` now funnels restaurant users directly to `/restaurant` after login.
+
+## Styling System
+
+- Tailwind classes power layout + responsive design (`src/index.css` already imports Tailwind 4).
+- shadcn/ui primitives (buttons, cards, tables, dialogs, toasts) live under `src/admin/components/ui` and are reused by the restaurant dashboard for visual parity.
+- Dark mode toggled by adding/removing the `dark` class on `document.documentElement`; persisted during the session.
+
+## Realtime + State
+
+- `useRestaurantStore` centralises API calls, optimistic updates, fallback data, and toast surfacing.
+- `useRestaurantSocket` listens for `restaurant:new-order` + `restaurant:status` events and pushes alerts + refreshes orders.
+
+## Forms & Validation
+
+- Zod schemas (`types/schemas.ts`) back all forms (menu items, profile, payouts, settings) ensuring typed payloads before hitting the API.
+- Menu + payout + profile pages show inline validation errors and success toasts.
+
+## Optional Improvements
+
+- Hook up real backend endpoints once available (replace dummy fallbacks in `restaurantStore`).
+- Wire security settings to actual backend sessions and MFA provider.
+- Add vitest coverage for hooks and store logic.
+- Expand socket channels to stream rider GPS updates in near realtime.
+
+## Getting Started
+
+1. Install deps: `npm install`
+2. Start API + Socket servers (see `/server`).
+3. Run `npm run dev` and login as a user with `role: "RESTAURANT"`.
+
+The RideN'Bite dashboard is mobile-first, dark-mode aware, and tuned for modern SaaS UX patterns.

@@ -22,6 +22,8 @@ const Login: React.FC = () => {
                 // Redirect based on user role
                 if (user.role === 'ADMIN') {
                     navigate('/admin');
+                } else if (user.role === 'RESTAURANT') {
+                    navigate('/restaurant');
                 } else {
                     navigate('/dashboard');
                 }

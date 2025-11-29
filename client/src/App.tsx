@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleBasedRedirect from './components/RoleBasedRedirect';
 import { AdminApp } from './admin/AdminApp';
+import { RestaurantApp } from './restaurant/RestaurantApp';
 
 function App() {
   return (
@@ -19,6 +20,11 @@ function App() {
       {/* Admin Routes - Requires ADMIN role */}
       <Route element={<ProtectedRoute roles={['ADMIN']} />}>
         <Route path="/admin/*" element={<AdminApp />} />
+      </Route>
+
+      {/* Restaurant Routes - Requires RESTAURANT role */}
+      <Route element={<ProtectedRoute roles={['RESTAURANT']} />}>
+        <Route path="/restaurant/*" element={<RestaurantApp />} />
       </Route>
 
       {/* Root route - redirect based on user role */}

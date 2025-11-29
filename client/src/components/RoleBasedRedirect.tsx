@@ -13,6 +13,10 @@ function RoleBasedRedirect() {
         return <Navigate to="/admin" replace />;
     }
 
+    if (user?.role === 'RESTAURANT') {
+        return <Navigate to="/restaurant" replace />;
+    }
+
     return <Navigate to="/dashboard" replace />;
 }
 
